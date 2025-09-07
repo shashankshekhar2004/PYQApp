@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { Form, Button, Card, Row, Col } from "react-bootstrap";
+import React, { useState, useRef, useEffect } from "react";
+import { Form, Button, Card, Row, Col, Spinner } from "react-bootstrap";
 import axios from "axios";
 import { pdfjs } from "react-pdf";
 import PdfView from "../components/PdfView";
-import "../App.css"; // Import the CSS file
+import "../App.css"; // local CSS
 
-// Configure the worker for PDF rendering
+// Configure worker for PDF rendering
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.js",
   import.meta.url
@@ -17,6 +17,14 @@ const Previous = () => {
   const [viewLoading, setViewLoading] = useState(false);
   const [error, setError] = useState("");
   const [pdfFile, setPdfFile] = useState(null);
+  const pdfRef = useRef(null);
+
+  // scroll into view when PDF loads
+  useEffect(() => {
+    if (pdfFile && pdfRef.current) {
+      pdfRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [pdfFile]);
 
   async function handleDownload(e) {
     e.preventDefault();
@@ -24,9 +32,9 @@ const Previous = () => {
     setLoading(true);
 
     try {
-      const filename = subjectCode.toUpperCase();
+      const filename = subjectCode.trim().toUpperCase();
       const response = await axios.post(
-        "https://pyqapp.onrender.com/search/search-files",
+        "https://pyqapp-3dmf.onrender.com/search/search-files",
         { filename },
         { responseType: "blob" }
       );
@@ -36,15 +44,15 @@ const Previous = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `${subjectCode}.pdf`);
+        link.setAttribute("download", `${filename}.pdf`);
         link.click();
         URL.revokeObjectURL(url);
       } else {
-        setError("PDF file not found.");
+        setError("❌ No PDF found for this subject code.");
       }
-    } catch (error) {
-      console.error("Error occurred:", error);
-      setError("PDF file not found.");
+    } catch (err) {
+      console.error("Download error:", err);
+      setError("⚠️ Server error, please try again later.");
     } finally {
       setLoading(false);
     }
@@ -56,9 +64,9 @@ const Previous = () => {
     setViewLoading(true);
 
     try {
-      const filename = subjectCode.toUpperCase();
+      const filename = subjectCode.trim().toUpperCase();
       const response = await axios.post(
-        "https://pyqapp.onrender.com/search/search-files",
+        "https://pyqapp-3dmf.onrender.com/search/search-files",
         { filename },
         { responseType: "blob" }
       );
@@ -66,26 +74,41 @@ const Previous = () => {
       if (response.data.size > 0) {
         const blob = new Blob([response.data], { type: "application/pdf" });
         setPdfFile(blob);
-        window.scrollBy(0, 500);
       } else {
-        setError("PDF file not found.");
+        setError("❌ No PDF found for this subject code.");
       }
-    } catch (error) {
-      setError("PDF file not found.");
-      console.error("Error occurred:", error);
+    } catch (err) {
+      console.error("View error:", err);
+      setError("⚠️ Server error, please try again later.");
     } finally {
       setViewLoading(false);
     }
   }
 
   return (
-    <div id="Previous">
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundImage: "url('/images/bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        paddingTop: "50px",
+      }}
+    >
       <div className="d-flex justify-content-center">
-        <Card className="mt-4 p-4" style={{ maxWidth: "600px" }}>
-          <h1 className="mb-4 text-center">Previous Year Paper</h1>
+        <Card
+          className="p-4"
+          style={{
+            maxWidth: "600px",
+            borderRadius: "12px",
+            boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+            background: "rgba(255,255,255,0.95)",
+          }}
+        >
+          <h1 className="mb-4 text-center">📘 Previous Year Paper</h1>
           <Form>
             <Form.Group controlId="subjectCode">
-              <Form.Label>Subject Code:</Form.Label>
+              <Form.Label>Subject Code /Name of file</Form.Label>
               <Form.Control
                 type="text"
                 value={subjectCode}
@@ -95,7 +118,7 @@ const Previous = () => {
               />
             </Form.Group>
 
-            <Row className="mb-3">
+            <Row className="mt-4">
               <Col>
                 <Button
                   variant="primary"
@@ -103,25 +126,38 @@ const Previous = () => {
                   className="w-100"
                   disabled={loading || viewLoading}
                 >
-                  {viewLoading ? "Loading..." : "View"}
+                  {viewLoading ? (
+                    <Spinner size="sm" animation="border" />
+                  ) : (
+                    "View"
+                  )}
                 </Button>
               </Col>
               <Col>
                 <Button
-                  variant="primary"
+                  variant="success"
                   onClick={handleDownload}
                   className="w-100"
-                  disabled={loading}
+                  disabled={loading || viewLoading}
                 >
-                  {loading ? "Downloading..." : "Download"}
+                  {loading ? (
+                    <Spinner size="sm" animation="border" />
+                  ) : (
+                    "Download"
+                  )}
                 </Button>
               </Col>
             </Row>
           </Form>
-          {error && <p className="text-danger mt-2">{error}</p>}
+          {error && <p className="text-danger mt-3 text-center">{error}</p>}
         </Card>
       </div>
-      {pdfFile && <PdfView pdf={pdfFile} />}
+
+      {pdfFile && (
+        <div ref={pdfRef} className="mt-5">
+          <PdfView pdf={pdfFile} />
+        </div>
+      )}
     </div>
   );
 };
