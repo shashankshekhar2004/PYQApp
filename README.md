@@ -4,7 +4,7 @@ A simple web application for managing and accessing **Previous Year Question Pap
 
 ## 🚀 Live Demo
 
-[Click here to view the deployed app](https://princepyq.netlify.app/)
+[Click here to view the deployed app](https://shashankpyq007.netlify.app/)
 
 ## 📌 Features
 
